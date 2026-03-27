@@ -85,7 +85,7 @@ namespace eclipse::gui::scripting {
     }
 
     std::string AIModule::getGroqKey() const {
-        return config::get<std::string>("ai.groq-key", "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");
+        return config::get<std::string>("ai.groq-key", "");
     }
 
     void AIModule::setGroqKey(const std::string& key) {
@@ -93,7 +93,7 @@ namespace eclipse::gui::scripting {
     }
 
     std::string AIModule::getOpenRouterKey() const {
-        return config::get<std::string>("ai.openrouter-key", "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");
+        return config::get<std::string>("ai.openrouter-key", "");
     }
 
     void AIModule::setOpenRouterKey(const std::string& key) {
