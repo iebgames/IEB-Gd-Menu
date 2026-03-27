@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IEB Menu | The Future of GD Mods</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <canvas id="particleCanvas"></canvas>
+
+    <nav class="navbar">
+        <div class="logo">
+            <span class="ieb-text">IEB</span><span class="menu-text">MENU</span>
+            <span class="version-badge">v1.1.0</span>
+        </div>
+        <div class="nav-links">
+            <a href="#features">FEATURES</a>
+            <a href="#download" class="nav-dl">DOWNLOAD</a>
+        </div>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <h1 class="main-title">IEB MENU</h1>
+            <p class="tagline">DEVELOPED BY IEB STUDIO • NOW WITH AI SCRIPTS</p>
+            <div class="action-btns">
+                <a href="#download" class="btn main-btn">GET THE MOD</a>
+                <a href="https://github.com/ieb-studio/ieb-menu" target="_blank" class="btn sub-btn">GITHUB</a>
+            </div>
+        </section>
+
+        <section id="features">
+            <h2 class="section-title">PACKED WITH FEATURES</h2>
+            <div class="features-grid">
+                <div class="feature-category">
+                    <h3>PLAYER</h3>
+                    <ul>
+                        <li>Rainbow Player, Noclip</li>
+                        <li>Jump Hack, No Spikes</li>
+                        <li>Respawn Delay, Respawn on Death</li>
+                        <li>Custom Wave Trail, Trail on Death</li>
+                        <li>No Death Effect, Instant Respawn</li>
+                    </ul>
+                </div>
+                <div class="feature-category">
+                    <h3>LEVEL</h3>
+                    <ul>
+                        <li>Layout Mode, Show Hitboxes</li>
+                        <li>Show Triggers, Show Invisible</li>
+                        <li>Practice Fix, Practice Coins</li>
+                        <li>Show Percentage, Auto-Checkpoints</li>
+                        <li>StartPos Switcher, No Portal Lighting</li>
+                    </ul>
+                </div>
+                <div class="feature-category">
+                    <h3>BYPASS</h3>
+                    <ul>
+                        <li>Instant Complete, Menu Gameplay</li>
+                        <li>Music Unlocker, Paths Unlocker</li>
+                        <li>Unlock Icons, Unlock Vaults</li>
+                        <li>Unlock Shops, Unlock Main Levels</li>
+                        <li>Show Spam Comments, Level Kick Bypass</li>
+                    </ul>
+                </div>
+                <div class="feature-category">
+                    <h3>CREATOR</h3>
+                    <ul>
+                        <li>Custom Object Bypass, Default Song Bypass</li>
+                        <li>Copy Hack, Verify Hack</li>
+                        <li>Free Scroll, Editor Wave Trail</li>
+                        <li>Object Limit Bypass, Scale Bypass</li>
+                        <li>Editor Zoom Bypass, Layer Bypass</li>
+                    </ul>
+                </div>
+                <div class="feature-category scripting-card">
+                    <div class="new-badge">NEW</div>
+                    <h3>IEB AI & SCRIPTING</h3>
+                    <ul>
+                        <li>Groq & OpenRouter Integration</li>
+                        <li>Native JavaScript (JS) Runner</li>
+                        <li>Autonomous Macro Generation</li>
+                        <li>Integrated Script Studio IDE</li>
+                        <li>Full Fullscreen Script Manager</li>
+                        <li>Shareable .json Script Files</li>
+                    </ul>
+                </div>
+                <div class="feature-category">
+                    <div class="new-badge">PREMIUM</div>
+                    <h3>GUI & THEMES</h3>
+                    <ul>
+                        <li>Modern ImGui Interface</li>
+                        <li>Megahack & Openhack Style Layouts</li>
+                        <li>Gruvbox & Custom Themes</li>
+                        <li>Smooth Animations & Transitions</li>
+                        <li>Highly Customizable UI Panel</li>
+                        <li>Real-time Scaling & Transparency</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section id="download" class="download-card">
+            <div class="glass-container">
+                <h2>READY TO DOWNLOAD?</h2>
+                <p>Experience the most premium Geometry Dash utility.</p>
+
+                <div class="custom-select" id="versionSelector">
+                    <div class="select-trigger">
+                        <span>SELECT VERSION</span>
+                        <div class="arrow"></div>
+                    </div>
+                    <div class="options">
+                        <div class="option"
+                            data-url="https://github.com/ieb-studio/ieb-menu/releases/download/v1.1.0/ieb.ieb_menu.geode">
+                            IEB Menu v1.1.0 (LATEST) - AI Integration</div>
+                        <div class="option"
+                            data-url="https://github.com/ieb-studio/ieb-menu/releases/download/v1.0.1/ieb.ieb_menu.geode">
+                            IEB Menu v1.0.1 - Bug Fixes</div>
+                        <div class="option"
+                            data-url="https://github.com/ieb-studio/ieb-menu/releases/download/v1.0.0/ieb.ieb_menu.geode">
+                            IEB Menu v1.0.0 - Initial Release</div>
+                    </div>
+                </div>
+
+                <button class="download-btn" id="finalDownload" disabled>DOWNLOAD .GEODE</button>
+                <p class="download-count" style="margin-top: 15px; font-size: 0.9em; color: rgba(255,255,255,0.7);">
+                    <span id="dl-number" style="font-weight: bold; color: var(--accent);">2,492</span> people
+                    already downloaded!
+                </p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 IEB STUDIO All Rights Reserved.</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

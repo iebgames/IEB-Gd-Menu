@@ -1,0 +1,294 @@
+#include "translations.hpp"
+
+#include <Geode/utils/web.hpp>
+#include <modules/config/config.hpp>
+#include <modules/labels/setting.hpp>
+#include <utils.hpp>
+
+namespace eclipse::i18n {
+    using Map = geode::utils::StringMap<std::string>;
+    Map g_fallback = {{"language-code", "en_US"}, {"menu.title", "IEB Menu"}};
+    Map g_translations = {{"language-code", "en_US"}, {"language-name", "English"}, {"menu.title", "IEB Menu"}};
+
+    geode::ZStringView get(geode::ZStringView key) {
+        auto it = g_translations.find(key);
+        if (it != g_translations.end()) {
+            return it->second;
+        }
+        auto fallbackIt = g_fallback.find(key);
+        if (fallbackIt != g_fallback.end()) {
+            return fallbackIt->second;
+        }
+        return key;
+    }
+
+    std::string const& get_(geode::ZStringView key) {
+        auto it = g_translations.find(key);
+        if (it != g_translations.end()) {
+            return it->second;
+        }
+        auto fallbackIt = g_fallback.find(key);
+        if (fallbackIt != g_fallback.end()) {
+            return fallbackIt->second;
+        }
+        static std::string keyStr;
+        keyStr = key;
+        return keyStr;
+    }
+
+    static std::string stringExtension(std::filesystem::path const& filename) {
+        // turns "en_US.lang.json" into "en_US"
+        auto filenameStr = geode::utils::string::pathToString(filename);
+        auto pos = filenameStr.find_first_of('.');
+        return filenameStr.substr(0, pos);
+    }
+
+    static void updateLanguageCode(Map& json, std::filesystem::path const& filename) {
+        json.insert_or_assign("language-code", stringExtension(filename));
+    }
+
+    // Dirty hack to refresh constant strings
+    void refreshStaticArrays() {
+        labels::alignmentNames[0] = get("labels.alignment.top-left").data();
+        labels::alignmentNames[1] = get("labels.alignment.top-center").data();
+        labels::alignmentNames[2] = get("labels.alignment.top-right").data();
+        labels::alignmentNames[3] = get("labels.alignment.middle-left").data();
+        labels::alignmentNames[4] = get("labels.alignment.middle-center").data();
+        labels::alignmentNames[5] = get("labels.alignment.middle-right").data();
+        labels::alignmentNames[6] = get("labels.alignment.bottom-left").data();
+        labels::alignmentNames[7] = get("labels.alignment.bottom-center").data();
+        labels::alignmentNames[8] = get("labels.alignment.bottom-right").data();
+
+        labels::fontAlignmentNames[0] = get("labels.font-alignment.left").data();
+        labels::fontAlignmentNames[1] = get("labels.font-alignment.center").data();
+        labels::fontAlignmentNames[2] = get("labels.font-alignment.right").data();
+
+        for (size_t i = 0; i < labels::eventNames.size(); ++i) {
+            labels::eventNames[i] = get(fmt::format("labels.events.types.{}", i)).data();
+        }
+
+        for (size_t i = 0; i < labels::visibleNames.size(); ++i) {
+            labels::visibleNames[i] = get(fmt::format("labels.events.visible.{}", i)).data();
+        }
+    }
+
+    void loadFallback(std::string_view code) {
+        auto langs = fetchAvailableLanguages();
+        auto it = std::ranges::find_if(langs, [&](auto const& lang) {
+            return lang.code == code;
+        });
+
+        if (it == langs.end()) return;
+
+        auto res = geode::utils::file::readJson(it->path);
+        if (res.isErr()) return;
+
+        auto res2 = res.unwrap().as<Map>();
+        if (res2.isErr()) return;
+        g_fallback = std::move(res2.unwrap());
+        updateLanguageCode(g_fallback, it->path.filename());
+    }
+
+    bool setLanguage(std::string_view code) {
+        auto langs = fetchAvailableLanguages();
+        auto it = std::ranges::find_if(langs, [&](auto const& lang) {
+            return lang.code == code;
+        });
+
+        if (it == langs.end()) return false;
+
+        auto res = geode::utils::file::readJson(it->path);
+        if (res.isErr()) return false;
+        auto map = res.unwrap().as<Map>();
+        if (map.isErr()) return false;
+
+        g_translations = std::move(map.unwrap());
+        updateLanguageCode(g_translations, it->path.filename());
+        config::setTemp<uint64_t>("language.index", std::distance(langs.begin(), it));
+
+        // check if current fallback is the same as the new language
+        if (g_fallback["language-code"] != it->fallback)
+            loadFallback(it->fallback);
+
+        refreshStaticArrays();
+        return true;
+    }
+
+    void init() {
+        auto language = config::get<std::string_view>("language", DEFAULT_LANGUAGE);
+        if (!setLanguage(language)) {
+            // fallback to English
+            setLanguage(DEFAULT_LANGUAGE);
+        }
+
+        downloadLanguages();
+    }
+
+    inline time_t getLastCheckTimestamp() {
+        return geode::Mod::get()->getSavedValue<int64_t>("last-language-check", ECLIPSE_TRANSLATION_TIMESTAMP);
+    }
+
+    inline void setLastCheckTimestamp(time_t timestamp = utils::getTimestamp<utils::seconds>()) {
+        geode::Mod::get()->setSavedValue<int64_t>("last-language-check", timestamp);
+    }
+
+    std::string getCurrentLanguage() {
+        if (!g_translations.contains("language-code")) {
+            return DEFAULT_LANGUAGE;
+        }
+        return g_translations["language-code"];
+    }
+
+    std::optional<LanguageMetadata> getLanguageName(std::filesystem::path const& path) {
+        auto res = geode::utils::file::readJson(path);
+        if (res.isErr()) return std::nullopt;
+        auto json = res.unwrap();
+
+        if (!json.contains("language-name") || !json.contains("language-native")) return std::nullopt;
+
+        auto fallback = json["language-fallback"].asString().unwrapOr(DEFAULT_LANGUAGE);
+        auto charset = json["language-charset"].asString().unwrapOr("default");
+
+        return LanguageMetadata{
+            json["language-name"].asString().unwrapOrDefault(),
+            std::string(stringExtension(path.filename())),
+            std::move(fallback),
+            std::move(charset),
+            path
+        };
+    }
+
+    std::vector<LanguageMetadata> fetchAvailableLanguages() {
+        static auto langsPath = geode::Mod::get()->getSaveDir() / "languages";
+        static auto fallbackPath = geode::Mod::get()->getResourcesDir();
+
+        std::vector<LanguageMetadata> result;
+        auto globLangs = [&](std::filesystem::path const& path) {
+            std::error_code ec;
+            std::filesystem::create_directories(path, ec);
+            if (ec) {
+                geode::log::warn("Failed to create languages directory {}: {}", path, ec.message());
+                return;
+            }
+            for (auto& entry : std::filesystem::directory_iterator(path, ec)) {
+                auto filename = geode::utils::string::pathToString(entry.path().filename());
+                if (filename.size() < 10 || filename.substr(filename.size() - 10) != ".lang.json") continue;
+
+                auto code = filename.substr(0, filename.size() - 10);
+                auto name = getLanguageName(entry.path());
+                if (!name) continue;
+
+                // filter out duplicates
+                if (std::ranges::find_if(result, [&](auto const& lang) {
+                    return lang.code == code;
+                }) != result.end()) continue;
+
+                result.push_back(std::move(*name));
+            }
+            if (ec) {
+                geode::log::warn("Failed to list languages in {}: {}", path, ec.message());
+            }
+        };
+
+        globLangs(langsPath);
+        globLangs(fallbackPath);
+
+        return result;
+    }
+
+    bool hasBitmapFont(std::string_view font) {
+        if (font == "default") return true;
+
+        static auto fontsPath = geode::Mod::get()->getConfigDir() / "bmfonts" / GEODE_MOD_ID;
+        std::error_code ec;
+        if (!std::filesystem::exists(fontsPath, ec))
+            return false;
+
+        if (!std::filesystem::exists(fontsPath / fmt::format("font_{}.fnt", font), ec))
+            return false;
+
+        return true;
+    }
+
+    void downloadLanguage(std::string code) {
+        // Disabled for IEB Menu as we use local translations
+        return;
+    }
+
+    geode::Result<> handleLanguageMetadata(matjson::Value metadata) {
+        auto lastCheck = getLastCheckTimestamp();
+
+        GEODE_UNWRAP_INTO(auto metadataTimestamp, metadata["timestamp"].asUInt());
+        if (metadataTimestamp <= lastCheck) return geode::Ok();
+
+        // languages is an array of locale names
+        GEODE_UNWRAP_INTO(auto languages, metadata["languages"].asArray());
+        for (auto const& lang : languages) {
+            GEODE_UNWRAP_INTO(auto code, lang.asString());
+            downloadLanguage(code);
+        }
+
+        setLastCheckTimestamp();
+        return geode::Ok();
+    }
+
+    void downloadLanguages() {
+        // Disabled for IEB Menu
+        return;
+    }
+
+    size_t getLanguageIndex() {
+        auto langs = fetchAvailableLanguages();
+        auto it = std::ranges::find_if(langs, [&](auto const& lang) {
+            return lang.code == config::get<std::string>("language", DEFAULT_LANGUAGE);
+        });
+
+        if (it == langs.end()) return 0;
+        return std::distance(langs.begin(), it);
+    }
+
+    bool operator&(GlyphRange lhs, GlyphRange rhs) {
+        return static_cast<int>(lhs) & static_cast<int>(rhs);
+    }
+
+    GlyphRange getRequiredGlyphRanges() {
+        auto it = g_translations.find("language-charset");
+        if (it == g_translations.end()) {
+            return GlyphRange::Default;
+        }
+
+        auto& charset = it->second;
+        if (charset == "greek") return GlyphRange::Greek;
+        if (charset == "korean") return GlyphRange::Korean;
+        if (charset == "japanese") return GlyphRange::Japanese;
+        if (charset == "chinese-full") return GlyphRange::ChineseFull;
+        if (charset == "chinese-simplified") return GlyphRange::ChineseSimplified;
+        if (charset == "cyrillic") return GlyphRange::Cyrillic;
+        if (charset == "thai") return GlyphRange::Thai;
+        if (charset == "vietnamese") return GlyphRange::Vietnamese;
+
+        return GlyphRange::Default;
+    }
+
+    std::string_view getRequiredGlyphRangesString() {
+        auto it = g_translations.find("language-charset");
+        if (it == g_translations.end()) {
+            return "default";
+        }
+        return it->second;
+    }
+
+    std::vector<std::string> getAvailableLanguages() {
+        auto langNames = fetchAvailableLanguages();
+        auto currentLang = getCurrentLanguage();
+        std::vector<std::string> langNamesVec;
+        for (const auto& lang : langNames) {
+            if (lang.code == currentLang) {
+                langNamesVec.push_back(fmt::format("{} ({})", i18n::get("language-native"), lang.code));
+                continue;
+            }
+            langNamesVec.push_back(fmt::format("{} ({})", lang.name, lang.code));
+        }
+        return langNamesVec;
+    }
+}
